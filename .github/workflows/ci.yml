@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: releasepulse
+          POSTGRES_USER: releasepulse
+          POSTGRES_PASSWORD: releasepulse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U releasepulse -d releasepulse"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore backend/ReleasePulse.sln
+
+      - name: Build
+        run: dotnet build backend/ReleasePulse.sln --no-restore -c Release
+
+      - name: Test (TRX)
+        run: |
+          dotnet test backend/ReleasePulse.Api.Tests/ReleasePulse.Api.Tests.csproj \
+            -c Release \
+            --logger "trx;LogFileName=test_results.trx" \
+            --results-directory TestResults
+
+      - name: Build test summary json
+        run: |
+          python3 scripts/ci/trx_to_summary.py > test-summary.json
+          cp test-summary.json backend/ReleasePulse.Api/wwwroot/test-summary.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Frontend install + build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: releasepulse-ci-artifacts
+          path: |
+            test-summary.json
+            backend/**/TestResults/**
+            frontend/dist/**
