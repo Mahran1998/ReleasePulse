@@ -1,0 +1,23 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+*.cache
+*.log
+
+# EF / tooling
+**/.config/
+!backend/.config/dotnet-tools.json
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# Env files
+.env
