@@ -8,7 +8,9 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
-
+    env:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Host=localhost;Port=5432;Database=releasepulse;Username=releasepulse;Password=releasepulse
     services:
       postgres:
         image: postgres:16
@@ -37,6 +39,23 @@ jobs:
 
       - name: Build
         run: dotnet build backend/ReleasePulse.sln --no-restore -c Release
+      
+      - name: Restore local dotnet tools
+        working-directory: backend
+        run: dotnet tool restore
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1 && echo "Postgres is up" && exit 0
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
+          echo "Postgres did not become ready" && exit 1
+
+      - name: Apply EF Core migrations
+        working-directory: backend
+        run: dotnet tool run dotnet-ef database update --project ReleasePulse.Api --startup-project ReleasePulse.Api
 
       - name: Test (TRX)
         run: |
