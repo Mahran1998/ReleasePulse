@@ -8,6 +8,7 @@
 
 # EF / tooling
 **/.config/
+!backend/.config/
 !backend/.config/dotnet-tools.json
 
 # Node / React
