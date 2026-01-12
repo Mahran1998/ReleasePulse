@@ -18,7 +18,9 @@ public class ApiFlowTests : IClassFixture<CustomWebApplicationFactory>
     {
         var create = new CreateWorkItemDto("Story 1", "desc");
         var resp = await _client.PostAsJsonAsync("/work-items", create);
-        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadAsStringAsync();
+        resp.IsSuccessStatusCode.Should().BeTrue($"Status: {resp.StatusCode}, Body: {body}");
+
 
         var list = await _client.GetFromJsonAsync<List<WorkItem>>("/work-items");
         list.Should().NotBeNull();
